@@ -39,6 +39,8 @@ import site.ycsb.DBException;
 import site.ycsb.Status;
 import site.ycsb.StringByteIterator;
 import site.ycsb.workloads.CoreWorkload;
+import io.grpc.ManagedChannelBuilder;
+import com.google.cloud.NoCredentials;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -100,6 +102,11 @@ public class CloudSpannerClient extends DB {
      * Number of Cloud Spanner client channels to use. It's recommended to leave this to be the default value.
      */
     static final String NUM_CHANNELS = "cloudspanner.channels";
+
+    /**
+     * Use plain text for communication.
+     */
+    static final String USE_PLAINTEXT = "cloudspanner.useplaintext";
   }
 
   private static int fieldCount;
@@ -154,7 +161,8 @@ public class CloudSpannerClient extends DB {
     int numThreads = Integer.parseInt(properties.getProperty(Client.THREAD_COUNT_PROPERTY, "1"));
     SpannerOptions.Builder optionsBuilder = SpannerOptions.newBuilder()
         .setSessionPoolOption(SessionPoolOptions.newBuilder()
-            .setMinSessions(numThreads)
+            .setMinSessions(0)
+            .setMaxSessions(1)
             // Since we have no read-write transactions, we can set the write session fraction to 0.
             .setWriteSessionsFraction(0)
             .build());
@@ -166,6 +174,11 @@ public class CloudSpannerClient extends DB {
     }
     if (numChannels != null) {
       optionsBuilder.setNumChannels(Integer.parseInt(numChannels));
+    }
+    boolean usePlaintext = Boolean.parseBoolean(properties.getProperty(CloudSpannerProperties.USE_PLAINTEXT));
+    if (usePlaintext) {
+      optionsBuilder.setChannelConfigurator(ManagedChannelBuilder::usePlaintext);
+      optionsBuilder.setCredentials(NoCredentials.getInstance());
     }
     spanner = optionsBuilder.build().getService();
     Runtime.getRuntime().addShutdownHook(new Thread("spannerShutdown") {
