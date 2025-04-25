@@ -107,6 +107,7 @@ public class CloudSpannerClient extends DB {
      * Use plain text for communication.
      */
     static final String USE_PLAINTEXT = "cloudspanner.useplaintext";
+    static final String EXPERIMENTAL_HOST="cloudspanner.experimentalhost";
   }
 
   private static int fieldCount;
@@ -179,6 +180,11 @@ public class CloudSpannerClient extends DB {
     if (usePlaintext) {
       optionsBuilder.setChannelConfigurator(ManagedChannelBuilder::usePlaintext);
       optionsBuilder.setCredentials(NoCredentials.getInstance());
+      optionsBuilder.setBuiltInMetricsEnabled(false);
+    }
+    String experimentalHost = properties.getProperty(CloudSpannerProperties.EXPERIMENTAL_HOST);
+    if (experimentalHost != null) {
+      optionsBuilder.setExperimentalHost(experimentalHost);
     }
     spanner = optionsBuilder.build().getService();
     Runtime.getRuntime().addShutdownHook(new Thread("spannerShutdown") {
